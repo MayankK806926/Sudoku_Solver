@@ -1,104 +1,72 @@
 #include<iostream>
-#include<algorithm>
 #include<vector>
 
 using namespace std;
 
+const int N = 9;
+const int BOX = 3;
+
 //This is to print the final solved sudoku grid.
-void print_final_grid(vector<vector<int>> soduku_grid){
-    for(int i=0;i<9;++i){
-        for(int j=0;j<9;++j){
-            cout<<soduku_grid[i][j]<<" ";
+void print_final_grid(const vector<vector<int>>& sudoku_grid){
+    for(int i=0;i<N;++i){
+        for(int j=0;j<N;++j){
+            cout<<sudoku_grid[i][j]<<" ";
         }
         cout<<endl;
     }
 }
 
-//Here we will be checking the validity along each row.
-bool checking_row(vector<vector<int>> sudoku_grid){
-    int num=sudoku_grid.size();
-    for(int i=0;i<num;++i){
-        vector<int> hsh(num+1,0);
-        for(int j=0;j<num;++j){
-            int value=sudoku_grid[i][j];
-            if(value>0) hsh[value]++;
-            if(hsh[value]>1) return false;
+//Checks whether placing 'n' at (row, col) breaks row/column/box rules.
+//Only inspects the row, column and box containing the cell (O(N) instead
+//of re-validating the whole grid on every candidate).
+bool can_place(const vector<vector<int>>& sudoku_grid, int row, int col, int n){
+    for(int i=0;i<N;++i){
+        if(sudoku_grid[row][i]==n) return false;
+        if(sudoku_grid[i][col]==n) return false;
+    }
+
+    int boxRow=(row/BOX)*BOX, boxCol=(col/BOX)*BOX;
+    for(int i=0;i<BOX;++i){
+        for(int j=0;j<BOX;++j){
+            if(sudoku_grid[boxRow+i][boxCol+j]==n) return false;
         }
     }
     return true;
 }
 
-//Here we will be checking the validity along each column.
-bool checking_column(vector<vector<int>> sudoku_grid){
-    int num=sudoku_grid.size();
-    for(int i=0;i<num;++i){
-        vector<int> hsh(num+1,0);
-        for(int j=0;j<num;++j){
-            int value=sudoku_grid[j][i];
-            if(value>0) hsh[value]++;
-            if(hsh[value]>1) return false;
-        }
-    }
-    return true;
-}
-
-//Here we will be checking the validity along each box.
-bool checking_box(vector<vector<int>> sudoku_grid){
-    int num=sudoku_grid.size();
-    for(int i=0;i<num;++i){
-        vector<int> hsh(num+1,0);
-        for(int j=0;j<num;++j){
-            int value=sudoku_grid[((i/3)*3)+(j/3)][((i%3)*3)+(j%3)];
-            if(value>0) hsh[value]++;
-            if(hsh[value]>1) return false;
-        }
-    }
-    return true;
-}
-
-//Calling all the validating functions of row, column and box.
-bool check_rules(vector<vector<int>> sudoku_grid){
-    if(checking_box(sudoku_grid) && checking_column(sudoku_grid) && checking_row(sudoku_grid)) return true;
-    else return false;
-}
-
-//To check whether we can insert n at x position in grid.
-bool can_insert_num(vector<vector<int>> sudoku_grid,int num,int x,int n){
-    sudoku_grid[x/num][x%num]=n;
-    if(check_rules(sudoku_grid)) return true;
-    else return false;
-}
-
-//Finds the first place, where we have to fit a number.
-int find_the_place(vector<vector<int>> sudoku_grid,int num){
-    for(int i=0;i<num*num;++i){
-        if(sudoku_grid[i/num][i%num]==0) return i;
-    }
-    return -1;
-}
-
-//This functions solves and checks whether the given grid can be solved or not.
-bool solve_the_grid(vector<vector<int>>& sudoku_grid){
-    int num=sudoku_grid.size();
-    int x=find_the_place(sudoku_grid,num);
-    if(x==-1) return true;
-    else{
-        for(int n=1;n<=num;++n){
-            if(can_insert_num(sudoku_grid,num,x,n)){
-                sudoku_grid[x/num][x%num]=n;
-                if(solve_the_grid(sudoku_grid)) return true;
-                else sudoku_grid[x/num][x%num]=0;
+//Finds the first empty cell (value 0) in row-major order.
+bool find_the_place(const vector<vector<int>>& sudoku_grid,int& row,int& col){
+    for(int i=0;i<N;++i){
+        for(int j=0;j<N;++j){
+            if(sudoku_grid[i][j]==0){
+                row=i; col=j;
+                return true;
             }
         }
-        return false;
     }
+    return false;
+}
+
+//This function solves and checks whether the given grid can be solved or not.
+bool solve_the_grid(vector<vector<int>>& sudoku_grid){
+    int row,col;
+    if(!find_the_place(sudoku_grid,row,col)) return true;
+
+    for(int n=1;n<=N;++n){
+        if(can_place(sudoku_grid,row,col,n)){
+            sudoku_grid[row][col]=n;
+            if(solve_the_grid(sudoku_grid)) return true;
+            sudoku_grid[row][col]=0;
+        }
+    }
+    return false;
 }
 
 int main(){
-    vector<vector<int>> sudoku_grid(9,vector<int> (9,0));
+    vector<vector<int>> sudoku_grid(N,vector<int>(N,0));
     //Taking the input of the initial state of grid.
-    for(int i=0;i<9;++i){
-        for(int j=0;j<9;++j){
+    for(int i=0;i<N;++i){
+        for(int j=0;j<N;++j){
             int num;
             cin>>num;
             //Checks whether the provided input is valid or not.
@@ -113,6 +81,6 @@ int main(){
     //Here we make ensure that the sudoku grid is solvable or not.
     if(solve_the_grid(sudoku_grid))
         print_final_grid(sudoku_grid);
-    else 
+    else
         cout<<"This grid cannot be solved!!! \nTry with other input grid."<<endl;
 }
